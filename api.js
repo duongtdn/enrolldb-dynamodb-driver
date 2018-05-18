@@ -65,7 +65,7 @@ const db = {
     dynamodb.deleteTable({ TableName: table }, done)
   },
 
-  getEnrollDetail({uid, courseId}, done) {
+  getEnroll({uid, courseId}, done) {
     if (!uid) {
       done && done({error: 'must specify uid'}, null)
       return
@@ -78,17 +78,21 @@ const db = {
     
     const params = { 
       TableName: table, 
-      Key:{
+      Key: {
         "uid": uid,
         "courseId": courseId
       }
     }
-
+    const docClient = new AWS.DynamoDB.DocumentClient();
     docClient.get(params, function(err, data) {
       if (err) {
-          done && done({ error:`Unable to read item: ${JSON.stringify(err, null, 2)}`}, null);
+        done && done({ error:`Unable to read item: ${JSON.stringify(err, null, 2)}`}, null);
       } else {
-          done && done(null, data);
+        if (data && data.Item) {
+          done && done(null, data.Item);
+        } else {
+          done && done(null, null);
+        }
       }
     });
 
@@ -98,8 +102,30 @@ const db = {
     // to be implemented
   },
 
-  createEnroll({uid, courseId, detail}, done) {
-    // to be implemented
+  createEnroll( enroll, done) {
+    if (!enroll) {
+      done && done(null, null)
+    }
+    if (!enroll.detail) {
+      enroll.detail = {};
+    }
+
+    const now = new Date();
+    enroll.detail.enrollAt = now.getTime();
+
+    const params = {
+      TableName: table,
+      Item: enroll
+    };
+    
+    const docClient = new AWS.DynamoDB.DocumentClient();
+    docClient.put(params, (err, data) => {
+      if (err) {
+        done && done(err);
+      } else {
+        done && done();
+      }
+    });
   },
 
   removeEnroll({uid, courseId}, done) {
@@ -107,3 +133,31 @@ const db = {
   },
 
 }
+
+function DynamoDB({ region = 'us-west-2', endpoint = 'http://localhost:8000' }, onReady) {
+ 
+  AWS.config.update({ region, endpoint });
+ 
+  dynamodb = new AWS.DynamoDB();
+
+  if (onReady) {
+    dynamodb.listTables(function (err, data) {
+      if (err) {
+        console.log("Error when checking DynamoDB status")
+        db._ready = false;
+        onReady(err);
+      } else {
+        db._ready = true;
+        onReady();
+      }
+    });
+  } else {
+    db._ready = true;
+  }
+
+  return db;
+
+}
+
+module.exports = DynamoDB;
+

@@ -4,8 +4,6 @@ const AWS = require('aws-sdk')
 
 let dynamodb = null
 
-const enrollDB = {}
-
 const table = 'ENROLL';
 
 const Enroll = {
@@ -99,20 +97,36 @@ const db = {
   },
 
   getEnrollList({uid}, done) {
-    // to be implemented
+    if (!uid) {
+      done && done({error: 'must specify uid'}, null)
+      return
+    }
+    const params = { 
+      TableName: table, 
+      KeyConditionExpression : 'uid = :id',
+      ExpressionAttributeValues: {
+        ':id': uid
+      }
+    }
+    const docClient = new AWS.DynamoDB.DocumentClient();
+    docClient.query(params, function(err, data) {
+      if (err) {
+        done && done({ error:`Unable to read item: ${JSON.stringify(err, null, 2)}`}, null);
+      } else {
+        if (data && data.Items) {
+          done && done(null, data.Items);
+        } else {
+          done && done(null, null);
+        }
+      }
+    });
   },
 
   createEnroll( enroll, done) {
     if (!enroll) {
       done && done(null, null)
     }
-    if (!enroll.detail) {
-      enroll.detail = {};
-    }
-
-    const now = new Date();
-    enroll.detail.enrollAt = now.getTime();
-
+    
     const params = {
       TableName: table,
       Item: enroll

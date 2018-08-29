@@ -125,6 +125,7 @@ const db = {
   createEnroll( enroll, done) {
     if (!enroll) {
       done && done(null, null)
+      return
     }
     
     const params = {

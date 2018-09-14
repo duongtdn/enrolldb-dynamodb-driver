@@ -147,6 +147,31 @@ const db = {
 
   },
 
+  setStatus({uid, courseId, updatedBy, status}, done) {
+    const now = new Date();
+    const d = now.getTime();
+
+    const params = {
+      TableName: table,
+      Key: {
+        uid,
+        courseId
+      },
+      UpdateExpression: `set #status = :s, updatedBy = :u, updatedAt = :d`,
+      ExpressionAttributeNames: { 
+        "#status": "status" 
+      },
+      ExpressionAttributeValues: {
+        ":s": status,
+        ":u": updatedBy,
+        ":d": d
+      }
+    }
+
+    const docClient = new AWS.DynamoDB.DocumentClient();
+    docClient.update(params, done)
+  }
+
 }
 
 function DynamoDB({ region = 'us-west-2', endpoint = 'http://localhost:8000' }, onReady) {

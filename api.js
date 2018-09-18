@@ -147,9 +147,19 @@ const db = {
 
   },
 
-  setStatus({uid, courseId, updatedBy, status}, done) {
+  setStatus({uid, courseId, activatedBy, status}, done) {
     const now = new Date();
     const d = now.getTime();
+
+    const UpdateExpression = activatedBy ?
+        `set #status = :s, activatedBy = :u, activatedAt = :d`
+        :
+        `set #status = :s, updatedAt = :d`
+
+    const ExpressionAttributeValues = activatedBy ?
+        { ":s": status, ":u": activatedBy, ":d": d }
+        :
+        { ":s": status, ":d": d }
 
     const params = {
       TableName: table,
@@ -157,15 +167,11 @@ const db = {
         uid,
         courseId
       },
-      UpdateExpression: `set #status = :s, updatedBy = :u, updatedAt = :d`,
+      UpdateExpression,
       ExpressionAttributeNames: { 
         "#status": "status" 
       },
-      ExpressionAttributeValues: {
-        ":s": status,
-        ":u": updatedBy,
-        ":d": d
-      }
+      ExpressionAttributeValues
     }
 
     const docClient = new AWS.DynamoDB.DocumentClient();
